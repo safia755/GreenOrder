@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>GreenOrder Admin</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{
+  --green:#16c172;
+  --bg:#f6faf7;
+  --card:#fff;
+  --text:#0b0f14;
+  --border:rgba(0,0,0,0.08);
+  --shadow:0 10px 25px rgba(0,0,0,0.06);
+}
+
+*{box-sizing:border-box;}
+
+body{
+  margin:0;
+  font-family:Inter;
+  background:var(--bg);
+  display:flex;
+  min-height:100vh;
+}
+
+.sidebar{
+  width:260px;
+  background:#fff;
+  border-right:1px solid var(--border);
+  padding:20px;
+}
+
+.logo{
+  font-size:22px;
+  font-weight:800;
+  margin-bottom:30px;
+}
+
+.logo .g{color:var(--green);}
+.logo .o{color:#111;}
+
+.nav button{
+  width:100%;
+  padding:12px;
+  margin-bottom:10px;
+  border:none;
+  border-radius:10px;
+  background:#f9fafb;
+  cursor:pointer;
+  text-align:left;
+  font-weight:500;
+  transition:0.2s;
+}
+
+.nav button:hover{
+  background:#eafff3;
+  transform:translateX(3px);
+}
+
+.nav button.active{
+  background:#d1fae5;
+  border-left:4px solid var(--green);
+}
+
+.main{
+  flex:1;
+  padding:30px;
+}
+
+.cards{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:20px;
+}
+
+.card{
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:20px;
+  box-shadow:var(--shadow);
+}
+
+input, select, textarea{
+  padding:10px;
+  border-radius:10px;
+  border:1px solid var(--border);
+  margin:5px;
+  width:200px;
+}
+
+textarea{
+  width:420px;
+  height:70px;
+}
+
+.btn{
+  background:var(--green);
+  color:white;
+  border:none;
+  padding:10px 14px;
+  border-radius:10px;
+  cursor:pointer;
+  font-weight:600;
+}
+
+table{
+  width:100%;
+  margin-top:20px;
+  border-collapse:collapse;
+  background:#fff;
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:var(--shadow);
+}
+
+th,td{
+  padding:14px;
+  border-bottom:1px solid var(--border);
+  text-align:left;
+}
+
+img.preview{
+  width:50px;
+  height:50px;
+  object-fit:cover;
+  border-radius:8px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="sidebar">
+  <div class="logo">
+    <span class="g">Green</span><span class="o">Order</span>
+  </div>
+
+  <div class="nav">
+    <button onclick="setActive(this);loadDashboard()">Dashboard</button>
+    <button onclick="setActive(this);loadCategories()">Catégories</button>
+    <button onclick="setActive(this);loadProducts()">Produits</button>
+    <button onclick="setActive(this);loadStats()">Statistiques</button>
+    <button onclick="loadHistory()">Historique</button>
+    <button onclick="location.href='/kitchen'">Kitchen</button>
+    <button onclick="location.href='/logout'">Logout</button>
+  </div>
+</div>
+
+<div class="main" id="app"></div>
+
+<script>
+
+function setActive(el){
+  document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"));
+  el.classList.add("active");
+}
+
+/* DASHBOARD */
+function loadDashboard(){
+  fetch("/api/dashboard_stats")
+  .then(r=>r.json())
+  .then(d=>{
+    document.getElementById("app").innerHTML=`
+      <h2>Dashboard</h2>
+
+      <div class="cards">
+        <div class="card">Produits <h2>${d.products}</h2></div>
+        <div class="card">Catégories <h2>${d.categories}</h2></div>
+        <div class="card">Aujourd'hui <h2>${d.orders_today}</h2></div>
+        <div class="card">Total <h2>${d.total_orders}</h2></div>
+      </div>
+
+      <div class="card" style="margin-top:20px;">
+        <canvas id="chart"></canvas>
+      </div>
+    `;
+
+    new Chart(document.getElementById("chart"),{
+      type:"bar",
+      data:{
+        labels:["Produits","Catégories","Aujourd'hui","Total"],
+        datasets:[{
+          data:[d.products,d.categories,d.orders_today,d.total_orders],
+          backgroundColor:"#16c172"
+        }]
+      }
+    });
+  });
+}
+
+/* CATEGORIES */
+function loadCategories(){
+  fetch("/api/categories")
+  .then(r=>r.json())
+  .then(data=>{
+    let html=`<h2>Catégories</h2>
+    <input id="catName" placeholder="Nouvelle catégorie">
+    <button class="btn" onclick="addCategory()">Ajouter</button>
+
+    <table><tr><th>Nom</th><th></th></tr>`;
+
+    data.forEach(c=>{
+      html+=`<tr>
+        <td>${c[1]}</td>
+        <td><button class="btn" onclick="deleteCategory(${c[0]})">Supprimer</button></td>
+      </tr>`;
+    });
+
+    html+="</table>";
+    app.innerHTML=html;
+  });
+}
+
+function addCategory(){
+  fetch("/api/add_category",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({name:catName.value})
+  }).then(()=>loadCategories());
+}
+
+/* PRODUCTS */
+let uploadedImage = "";
+
+function loadProducts(){
+  fetch("/api/categories")
+  .then(r=>r.json())
+  .then(cats=>{
+    fetch("/api/products")
+    .then(r=>r.json())
+    .then(data=>{
+
+      let options = cats.map(c=>`<option value="${c[1]}">${c[1]}</option>`).join("");
+
+      let html=`<h2>Produits</h2>
+
+      <input id="name" placeholder="Nom">
+      <input id="price" placeholder="Prix (DA)">
+      <select id="category">${options}</select>
+      <textarea id="desc" placeholder="Description"></textarea>
+      <input type="file" onchange="uploadImage(event)">
+      <button class="btn" id="mainBtn" onclick="addProduct()">Ajouter</button>
+
+      <table>
+      <tr>
+        <th>Image</th>
+        <th>Nom</th>
+        <th>Prix</th>
+        <th>Catégorie</th>
+        <th>Description</th>
+        <th>Actions</th>
+      </tr>`;
+
+      data.forEach(p=>{
+        html+=`<tr>
+          <td>${p.image ? `<img class="preview" src="${p.image}">` : ""}</td>
+          <td>${p.name || "Sans nom"}</td>
+          <td>${p.price} DA</td>
+          <td>${p.category}</td>
+          <td>${p.description || ""}</td>
+          <td>
+            <button class="btn" onclick="editProduct(${p.id}, '${p.name}', ${p.price}, '${p.category}', \`${p.description || ""}\`)">Modifier</button>
+            <button class="btn" onclick="deleteProduct(${p.id})">Supprimer</button>
+          </td>
+        </tr>`;
+      });
+
+      html+="</table>";
+      app.innerHTML=html;
+    });
+  });
+}
+
+function uploadImage(e){
+  const reader = new FileReader();
+  reader.onload = () => uploadedImage = reader.result;
+  reader.readAsDataURL(e.target.files[0]);
+}
+
+function addProduct(){
+  fetch("/api/add_product",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      name:document.getElementById("name").value,
+      price:document.getElementById("price").value,
+      category:document.getElementById("category").value,
+      description:document.getElementById("desc").value,
+      image:uploadedImage
+    })
+  }).then(()=>loadProducts());
+}
+
+function deleteProduct(id){
+  fetch("/api/delete_product/"+id,{method:"DELETE"})
+  .then(()=>loadProducts());
+}
+
+function editProduct(id,name,price,category,description){
+  document.getElementById("name").value=name;
+  document.getElementById("price").value=price;
+  document.getElementById("category").value=category;
+  document.getElementById("desc").value=description;
+
+  const btn=document.getElementById("mainBtn");
+  btn.innerText="Mettre à jour";
+
+  btn.onclick=function(){
+    fetch("/api/edit_product/"+id,{
+      method:"PUT",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        name:document.getElementById("name").value,
+        price:document.getElementById("price").value,
+        category:document.getElementById("category").value,
+        description:document.getElementById("desc").value,
+        image:uploadedImage
+      })
+    }).then(()=>loadProducts());
+  }
+}
+
+/* HISTORY */
+function loadHistory(){
+  fetch("/api/orders_history")
+  .then(r=>r.json())
+  .then(data=>{
+
+    let html = `
+      <h2>Historique des commandes</h2>
+
+      <table>
+        <tr>
+          <th>Table</th>
+          <th>Commande</th>
+          <th>Heure</th>
+          <th>Total (DA)</th>
+          <th>Status</th>
+        </tr>
+    `;
+
+    data.forEach(o => {
+
+      let itemsHtml = "";
+
+      o.items.forEach(i => {
+        itemsHtml += `${i.qty}x ${i.name} (${i.subtotal} DA)<br>`;
+      });
+
+      html += `
+        <tr>
+          <td><b>Table ${o.table}</b></td>
+          <td>${itemsHtml}</td>
+          <td>${o.time}</td>
+          <td><b>${o.total} DA</b></td>
+          <td>${o.status}</td>
+        </tr>
+      `;
+    });
+
+    html += "</table>";
+
+    document.getElementById("app").innerHTML = html;
+  });
+}
+/* STATS */
+function loadStats(){
+  fetch("/api/dashboard_stats")
+  .then(r=>r.json())
+  .then(d=>{
+    app.innerHTML=`
+      <h2>Statistiques</h2>
+      <div class="cards">
+        <div class="card">Revenue <h2>${d.total_orders*1200} DA</h2></div>
+        <div class="card">Performance <h2>Bonne</h2></div>
+        <div class="card">Conversion <h2>68%</h2></div>
+        <div class="card">Activité <h2>Stable</h2></div>
+      </div>`;
+  });
+}
+
+loadDashboard();
+
+</script>
+
+</body>
+</html>

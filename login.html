@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Connexion - GreenOrder</title>
+
+<style>
+:root{
+  --green:#16c172;
+  --text:#0b0f14;
+  --muted:#5b6472;
+  --border:rgba(0,0,0,0.08);
+}
+
+*{
+  box-sizing:border-box;
+  scroll-behavior:smooth;
+}
+
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
+  background:linear-gradient(135deg,#f7faf8,#ffffff);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100vh;
+  overflow:hidden;
+}
+
+/* 🌊 BACKGROUND ANIMATION */
+.bg{
+  position:fixed;
+  inset:0;
+  z-index:-1;
+}
+
+.bg span{
+  position:absolute;
+  width:380px;
+  height:380px;
+  border-radius:50%;
+  background:rgba(0,0,0,0.03);
+  filter:blur(60px);
+  animation:float 14s infinite ease-in-out;
+}
+
+.bg span:nth-child(1){
+  top:-100px;
+  left:-100px;
+}
+
+.bg span:nth-child(2){
+  bottom:-120px;
+  right:-120px;
+  animation-duration:18s;
+}
+
+@keyframes float{
+  0%{transform:translate(0,0);}
+  50%{transform:translate(50px,40px);}
+  100%{transform:translate(0,0);}
+}
+
+/* CARD */
+.container{
+  width:400px;
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:22px;
+  padding:30px;
+  box-shadow:0 30px 80px rgba(0,0,0,0.08);
+  animation:fadeUp 0.6s ease;
+  z-index:2;
+}
+
+/* LOGO */
+.logo{
+  text-align:center;
+  font-size:22px;
+  font-weight:800;
+  margin-bottom:10px;
+}
+
+.logo span{color:var(--green);}
+
+/* TITLE */
+h2{
+  text-align:center;
+  margin-bottom:20px;
+  font-weight:600;
+}
+
+/* INPUTS */
+input{
+  width:100%;
+  padding:12px;
+  margin:8px 0;
+  border-radius:12px;
+  border:1px solid var(--border);
+  outline:none;
+  font-size:14px;
+  transition:0.3s;
+}
+
+input:focus{
+  border-color:var(--green);
+  box-shadow:0 0 0 3px rgba(22,193,114,0.15);
+}
+
+/* BUTTON */
+button{
+  width:100%;
+  padding:12px;
+  margin-top:15px;
+  border-radius:14px;
+  border:none;
+  background:var(--green);
+  color:white;
+  font-weight:600;
+  cursor:pointer;
+  transition:0.3s;
+}
+
+button:hover{
+  transform:translateY(-2px);
+  box-shadow:0 10px 30px rgba(22,193,114,0.3);
+}
+
+button:disabled{
+  opacity:0.6;
+  cursor:not-allowed;
+}
+
+/* TEXT */
+p{
+  text-align:center;
+  margin-top:15px;
+  font-size:13px;
+  color:var(--muted);
+}
+
+a{
+  color:var(--green);
+  text-decoration:none;
+}
+
+/* 🍏 TOAST NOTIFICATION */
+.toast{
+  position:fixed;
+  top:20px;
+  left:50%;
+  transform:translateX(-50%);
+  background:rgba(20,20,20,0.92);
+  color:white;
+  padding:12px 18px;
+  border-radius:14px;
+  font-size:14px;
+  opacity:0;
+  pointer-events:none;
+  transition:0.4s ease;
+  backdrop-filter:blur(10px);
+}
+
+.toast.show{
+  opacity:1;
+  transform:translateX(-50%) translateY(10px);
+}
+
+/* ANIMATION */
+@keyframes fadeUp{
+  from{opacity:0; transform:translateY(20px);}
+  to{opacity:1; transform:translateY(0);}
+}
+</style>
+</head>
+
+<body>
+
+<!-- 🌊 BACKGROUND -->
+<div class="bg">
+  <span></span>
+  <span></span>
+</div>
+
+<div class="container">
+
+  <div class="logo">
+    <span>Green</span>Order
+  </div>
+
+  <h2>Connexion</h2>
+
+  <input type="text" id="phone" placeholder="Numéro téléphone">
+  <input type="password" id="password" placeholder="Mot de passe">
+
+  <button id="btn" onclick="login()">Se connecter</button>
+
+  <p>
+    Pas encore inscrit ? <a href="/register">Créer un compte</a>
+  </p>
+
+</div>
+
+<!-- 🍏 TOAST -->
+<div id="toast" class="toast"></div>
+
+<script>
+
+function showToast(msg){
+  const toast=document.getElementById("toast");
+  toast.innerText=msg;
+  toast.classList.add("show");
+
+  setTimeout(()=>{
+    toast.classList.remove("show");
+  },2500);
+}
+
+function login(){
+
+  const btn=document.getElementById("btn");
+  btn.disabled=true;
+  btn.innerText="Connexion...";
+
+  const data={
+    phone:document.getElementById("phone").value,
+    password:document.getElementById("password").value
+  };
+
+  if(!data.phone || !data.password){
+    showToast("Veuillez remplir tous les champs");
+    btn.disabled=false;
+    btn.innerText="Se connecter";
+    return;
+  }
+
+  fetch("/login",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(data)
+  })
+  .then(res=>res.json())
+  .then(data=>{
+
+    if(data.message==="Connexion réussie"){
+      showToast("Connexion réussie");
+
+      setTimeout(()=>{
+        window.location.href="/admin";
+      },1200);
+
+    }else{
+      showToast(data.message);
+    }
+
+    btn.disabled=false;
+    btn.innerText="Se connecter";
+  })
+  .catch(()=>{
+    showToast("Erreur serveur");
+    btn.disabled=false;
+    btn.innerText="Se connecter";
+  });
+
+}
+
+</script>
+
+</body>
+</html>

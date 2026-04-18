@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>GreenOrder - Menu</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+:root{
+  --green:#16c172;
+  --bg:#f6faf7;
+  --card:#ffffff;
+  --text:#0b0f14;
+  --muted:#6b7280;
+  --border:rgba(0,0,0,0.08);
+  --shadow:0 10px 25px rgba(0,0,0,0.06);
+}
+
+*{box-sizing:border-box;}
+
+body{
+  margin:0;
+  font-family:Inter,Segoe UI,Arial;
+  background:var(--bg);
+  color:var(--text);
+}
+
+/* HEADER */
+header{
+  background:white;
+  padding:18px;
+  text-align:center;
+  font-size:22px;
+  font-weight:800;
+  border-bottom:1px solid var(--border);
+}
+
+header span.green{color:var(--green);}
+
+/* TABLE INPUT */
+.table-input{
+  padding:10px;
+  text-align:center;
+  background:white;
+  border-bottom:1px solid var(--border);
+}
+.table-input input{
+  padding:8px;
+  border-radius:8px;
+  border:1px solid #ddd;
+}
+
+/* CATEGORY BAR */
+#categories{
+  display:flex;
+  gap:10px;
+  overflow-x:auto;
+  padding:12px;
+  background:white;
+  border-bottom:1px solid var(--border);
+}
+
+.cat{
+  padding:10px 14px;
+  border-radius:999px;
+  background:#f1f5f3;
+  cursor:pointer;
+  white-space:nowrap;
+  transition:0.2s;
+}
+.cat:hover{transform:translateY(-2px);}
+
+.cat.active{
+  background:var(--green);
+  color:white;
+}
+
+/* PRODUCTS */
+#products{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  gap:12px;
+  padding:15px;
+}
+
+.product{
+  background:white;
+  border:1px solid var(--border);
+  border-radius:14px;
+  overflow:hidden;
+  box-shadow:var(--shadow);
+  transition:0.2s;
+}
+.product:hover{transform:translateY(-4px);}
+
+.product img{
+  width:100%;
+  height:120px;
+  object-fit:cover;
+  background:#eee;
+}
+
+.product-body{padding:10px;}
+
+.name{font-weight:600;}
+.desc{font-size:12px;color:var(--muted);}
+.price{color:var(--green);font-weight:700;}
+
+/* BUTTON */
+button{
+  width:100%;
+  margin-top:8px;
+  padding:10px;
+  border:none;
+  border-radius:10px;
+  background:var(--green);
+  color:white;
+  cursor:pointer;
+  transition:0.15s ease;
+}
+
+button:hover{
+  transform:translateY(-2px);
+  box-shadow:0 6px 12px rgba(0,0,0,0.1);
+}
+
+button:active{
+  transform:scale(0.96);
+  box-shadow:0 2px 6px rgba(0,0,0,0.08);
+}
+
+/* MODAL */
+.modal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.4);
+  display:none;
+  justify-content:center;
+  align-items:center;
+  animation:fadeIn 0.2s ease;
+}
+
+.modal-content{
+  background:white;
+  padding:20px;
+  border-radius:15px;
+  width:90%;
+  max-width:400px;
+  animation:scaleIn 0.2s ease;
+}
+
+/* CART */
+.cart{
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  background:white;
+  padding:10px;
+  border-top:1px solid var(--border);
+}
+
+/* TOAST MODERNE */
+.toast{
+  position:fixed;
+  bottom:20px;
+  right:20px;
+  background:#111;
+  color:white;
+  padding:14px 18px;
+  border-radius:12px;
+  opacity:0;
+  transform:translateY(30px) scale(0.95);
+  transition:all 0.35s cubic-bezier(.2,.8,.2,1);
+  box-shadow:0 10px 30px rgba(0,0,0,0.2);
+}
+
+.toast.show{
+  opacity:1;
+  transform:translateY(0) scale(1);
+}
+
+/* ANIM */
+@keyframes fadeIn{
+  from{opacity:0;}
+  to{opacity:1;}
+}
+
+@keyframes scaleIn{
+  from{transform:scale(0.9);}
+  to{transform:scale(1);}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <span class="green">Green</span>Order Menu
+</header>
+
+<div class="table-input">
+  Table : <input id="table" placeholder="Numéro">
+</div>
+
+<div id="categories"></div>
+<div id="products"></div>
+
+<div class="cart">
+  <div id="cartItems"></div>
+  <strong>Total: <span id="total">0</span> DA</strong>
+  <button onclick="sendOrder()">Commander</button>
+</div>
+
+<div class="modal" id="modal" onclick="closeModal(event)">
+  <div class="modal-content">
+    <h3 id="modalName"></h3>
+
+    Quantité:
+    <button onclick="qty-- ; updateQty()">-</button>
+    <span id="qty">1</span>
+    <button onclick="qty++ ; updateQty()">+</button>
+
+    <textarea id="comment" placeholder="Ex: sans tomate"
+    style="width:100%;margin-top:10px;"></textarea>
+
+    <button onclick="confirmAdd()">Ajouter</button>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+
+let allProducts=[];
+let selectedProduct=null;
+let cart=[];
+let qty=1;
+
+/* TOAST */
+function toast(msg){
+  const t=document.getElementById("toast");
+  t.innerText=msg;
+  t.classList.add("show");
+
+  setTimeout(()=>{
+    t.classList.remove("show");
+  },2500);
+}
+
+/* LOAD */
+function loadMenu(){
+  Promise.all([
+    fetch("/api/products").then(r=>r.json()),
+    fetch("/api/categories").then(r=>r.json())
+  ])
+  .then(([products,categories])=>{
+
+    allProducts=products;
+
+    let catHTML=`<div class="cat active" onclick="filter('all',this)">Tous</div>`;
+    categories.forEach(c=>{
+      catHTML+=`<div class="cat" onclick="filter('${c[1]}',this)">${c[1]}</div>`;
+    });
+
+    document.getElementById("categories").innerHTML=catHTML;
+
+    renderProducts(products);
+  });
+}
+
+/* FILTER */
+function filter(cat,el){
+  document.querySelectorAll(".cat").forEach(c=>c.classList.remove("active"));
+  el.classList.add("active");
+
+  if(cat==="all"){
+    renderProducts(allProducts);
+  }else{
+    renderProducts(allProducts.filter(p=>p.category===cat));
+  }
+}
+
+/* PRODUCTS */
+function renderProducts(products){
+  const container=document.getElementById("products");
+
+  container.innerHTML=products.map(p=>`
+    <div class="product">
+      <img src="${p.image || ''}">
+      <div class="product-body">
+        <div class="name">${p.name}</div>
+        <div class="desc">${p.description || ''}</div>
+        <div class="price">${p.price} DA</div>
+
+        <button onclick='openModal(${JSON.stringify(p)})'>
+          Ajouter
+        </button>
+      </div>
+    </div>
+  `).join("");
+}
+
+/* MODAL */
+function openModal(p){
+  selectedProduct=p;
+  qty=1;
+  document.getElementById("modal").style.display="flex";
+  document.getElementById("modalName").innerText=p.name;
+  document.getElementById("qty").innerText=qty;
+}
+
+function closeModal(e){
+  if(e.target.id==="modal"){
+    document.getElementById("modal").style.display="none";
+  }
+}
+
+function updateQty(){
+  if(qty<1) qty=1;
+  document.getElementById("qty").innerText=qty;
+}
+
+/* ADD */
+function confirmAdd(){
+  const comment=document.getElementById("comment").value;
+
+  cart.push({
+    name:selectedProduct.name,
+    price:selectedProduct.price,
+    qty:qty,
+    comment:comment
+  });
+
+  document.getElementById("modal").style.display="none";
+  document.getElementById("comment").value="";
+
+  toast("Produit ajouté");
+  updateCart();
+}
+
+/* CART */
+function updateCart(){
+  let total=0;
+  let html="";
+
+  cart.forEach(i=>{
+    total+=i.price*i.qty;
+    html+=`<div>${i.qty}x ${i.name}</div>`;
+  });
+
+  document.getElementById("cartItems").innerHTML=html;
+  document.getElementById("total").innerText=total;
+}
+
+/* SEND ORDER (OK API) */
+function sendOrder(){
+  const table=document.getElementById("table").value;
+
+  if(!table){
+    toast("Numéro de table requis");
+    return;
+  }
+
+  if(cart.length===0){
+    toast("Panier vide");
+    return;
+  }
+
+  fetch("/api/add_order",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      table:table,
+      items:cart
+    })
+  })
+  .then(()=>{
+
+    cart=[];
+    updateCart();
+
+    toast("Commande envoyée");
+
+  });
+}
+
+loadMenu();
+
+</script>
+
+</body>
+</html>

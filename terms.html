@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>CGU - GreenOrder</title>
+
+<style>
+:root{
+  --green:#16c172;
+  --text:#0b0f14;
+  --muted:#5b6472;
+  --border:rgba(0,0,0,0.08);
+}
+
+*{scroll-behavior:smooth;}
+
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
+  background:#fff;
+  color:var(--text);
+}
+
+/* NAV */
+nav{
+  position:fixed;
+  top:0;
+  width:100%;
+  display:flex;
+  justify-content:center;
+  padding:16px 0;
+  background:rgba(255,255,255,0.75);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  z-index:100;
+}
+
+.nav-inner{
+  width:100%;
+  max-width:1100px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:0 24px;
+}
+
+.logo{
+  font-weight:800;
+}
+
+.logo .g{color:var(--green);}
+
+.btn{
+  background:var(--green);
+  border:none;
+  padding:10px 16px;
+  border-radius:999px;
+  color:white;
+  font-weight:600;
+  text-decoration:none;
+}
+
+/* CONTENT */
+.container{
+  max-width:900px;
+  margin:140px auto 80px;
+  padding:0 20px;
+}
+
+h1{font-size:44px;}
+h2{margin-top:45px;font-size:24px;}
+
+p{
+  color:var(--muted);
+  line-height:1.8;
+  font-size:16px;
+}
+
+.section{
+  opacity:0;
+  transform:translateY(25px);
+  transition:0.8s;
+}
+.section.show{
+  opacity:1;
+  transform:translateY(0);
+}
+</style>
+</head>
+
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <div class="logo">
+      <span class="g">Green</span>Order
+    </div>
+
+    <a class="btn" href="/landing">
+      Retour à l’accueil
+    </a>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="section">
+    <h1>Conditions Générales d’Utilisation</h1>
+    <p>Dernière mise à jour : 2026</p>
+    <p>
+      GreenOrder est une solution SaaS permettant aux restaurants de digitaliser leur service de commande via QR code et menu intelligent.
+      En utilisant la plateforme, vous acceptez les présentes conditions.
+    </p>
+  </div>
+
+  <div class="section">
+    <h2>1. Objet du service</h2>
+    <p>
+      GreenOrder fournit un outil numérique permettant la prise de commande, la gestion de menu et la transmission des commandes en cuisine en temps réel.
+      Nous agissons uniquement comme fournisseur technologique.
+    </p>
+  </div>
+
+  <div class="section">
+    <h2>2. Accès à la plateforme</h2>
+    <p>
+      L’accès est réservé aux professionnels de la restauration disposant d’un établissement légalement déclaré.
+      L’utilisateur doit fournir des informations exactes lors de son inscription.
+    </p>
+  </div>
+
+  <div class="section">
+    <h2>3. Responsabilités</h2>
+    <p>
+      Le restaurant est entièrement responsable de son menu, de ses prix et de la qualité des produits proposés.
+      GreenOrder ne gère pas les transactions commerciales avec les clients finaux.
+    </p>
+  </div>
+
+  <div class="section">
+    <h2>4. Utilisation du service</h2>
+    <p>
+      Il est interdit d’utiliser la plateforme à des fins frauduleuses, illégales ou nuisibles au bon fonctionnement du système.
+    </p>
+  </div>
+
+  <div class="section">
+    <h2>5. Disponibilité</h2>
+    <p>
+      Nous visons une disponibilité maximale, mais des interruptions temporaires peuvent survenir pour maintenance ou mises à jour.
+    </p>
+  </div>
+
+  <div class="section">
+    <h2>6. Abonnement</h2>
+    <p>
+      Certaines fonctionnalités peuvent être accessibles via abonnement ou période d’essai.
+    </p>
+  </div>
+
+  <div class="section">
+    <h2>7. Résiliation</h2>
+    <p>
+      L’utilisateur peut arrêter son utilisation à tout moment. En cas de non-respect des règles, GreenOrder peut suspendre un compte.
+    </p>
+  </div>
+
+  <div class="section">
+    <h2>8. Propriété intellectuelle</h2>
+    <p>
+      Tous les éléments de la plateforme (code, design, marque) sont protégés.
+      L’utilisateur conserve la propriété de son contenu (menus, données).
+    </p>
+  </div>
+
+</div>
+
+<script>
+const sections=document.querySelectorAll('.section');
+
+const observer=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting) e.target.classList.add('show');
+  });
+},{threshold:0.15});
+
+sections.forEach(s=>observer.observe(s));
+</script>
+
+</body>
+</html>

@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>GreenOrder Admin Pro</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+
+<style>
+:root{
+  --green:#16c172;
+  --bg:#f4f7f6;
+  --card:#ffffff;
+  --text:#0b0f14;
+  --border:rgba(0,0,0,0.08);
+  --shadow:0 12px 30px rgba(0,0,0,0.08);
+}
+
+*{box-sizing:border-box;}
+
+body{
+  margin:0;
+  font-family:Inter;
+  background:var(--bg);
+  display:flex;
+  min-height:100vh;
+  color:var(--text);
+}
+
+/* SIDEBAR */
+.sidebar{
+  width:260px;
+  background:#fff;
+  border-right:1px solid var(--border);
+  padding:20px;
+  animation:slideLeft 0.4s ease;
+}
+
+@keyframes slideLeft{
+  from{transform:translateX(-20px);opacity:0;}
+  to{transform:translateX(0);opacity:1;}
+}
+
+.logo{
+  font-size:22px;
+  font-weight:800;
+  margin-bottom:25px;
+}
+
+.logo span{color:var(--green);}
+
+.nav button{
+  width:100%;
+  padding:12px;
+  margin-bottom:10px;
+  border:none;
+  border-radius:12px;
+  background:#f9fafb;
+  cursor:pointer;
+  text-align:left;
+  font-weight:500;
+  transition:0.25s;
+}
+
+.nav button:hover{
+  background:#eafff3;
+  transform:translateX(4px);
+}
+
+.nav button.active{
+  background:#d1fae5;
+  border-left:4px solid var(--green);
+}
+
+/* MAIN */
+.main{
+  flex:1;
+  padding:28px;
+  animation:fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn{
+  from{opacity:0;transform:translateY(10px);}
+  to{opacity:1;transform:translateY(0);}
+}
+
+/* DASHBOARD CARDS */
+.cards{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:15px;
+  margin-top:15px;
+}
+
+.card{
+  background:linear-gradient(145deg,#fff,#f8faf9);
+  border-radius:16px;
+  padding:18px;
+  box-shadow:var(--shadow);
+  border:1px solid var(--border);
+  transition:0.25s;
+}
+
+.card:hover{
+  transform:translateY(-4px);
+}
+
+/* BUTTON */
+.btn{
+  background:var(--green);
+  color:white;
+  border:none;
+  padding:10px 14px;
+  border-radius:10px;
+  cursor:pointer;
+  font-weight:600;
+  transition:0.2s;
+}
+
+.btn:hover{
+  transform:scale(1.03);
+  filter:brightness(1.05);
+}
+
+/* TABLE */
+table{
+  width:100%;
+  margin-top:15px;
+  border-collapse:collapse;
+  background:#fff;
+  border-radius:14px;
+  overflow:hidden;
+  box-shadow:var(--shadow);
+  animation:fadeIn 0.4s ease;
+}
+
+th,td{
+  padding:12px;
+  border-bottom:1px solid var(--border);
+  text-align:left;
+}
+
+/* INPUT */
+input,select,textarea{
+  padding:10px;
+  border-radius:10px;
+  border:1px solid var(--border);
+  margin:5px;
+  outline:none;
+}
+
+/* HISTORY PREMIUM */
+.historyCard{
+  background:#fff;
+  padding:15px;
+  border-radius:14px;
+  box-shadow:var(--shadow);
+  margin-bottom:12px;
+  transition:0.2s;
+}
+
+.historyCard:hover{
+  transform:translateY(-2px);
+}
+
+/* QR */
+.qrBox{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  gap:15px;
+}
+
+.qrCard{
+  background:#fff;
+  padding:12px;
+  border-radius:12px;
+  box-shadow:var(--shadow);
+  text-align:center;
+}
+
+h2{
+  font-size:24px;
+  margin-bottom:10px;
+}
+.toast{
+  position:fixed;
+  bottom:20px;
+  right:20px;
+  background:#16c172;
+  color:white;
+  padding:12px 18px;
+  border-radius:12px;
+  box-shadow:0 10px 25px rgba(0,0,0,0.2);
+  opacity:0;
+  transform:translateY(20px);
+  transition:0.3s;
+  z-index:9999;
+  font-weight:500;
+}
+
+.toast.show{
+  opacity:1;
+  transform:translateY(0);
+}
+</style>
+</head>
+<div id="toast" class="toast"></div>
+<body>
+
+<div class="sidebar">
+  <div class="logo"><span>Green</span>Order</div>
+
+  <div class="nav">
+    <button onclick="setActive(this);loadDashboard()">Dashboard</button>
+    <button onclick="setActive(this);loadCategories()">Catégories</button>
+    <button onclick="setActive(this);loadProducts()">Produits</button>
+    <button onclick="setActive(this);loadQR()">QR Tables</button>
+    <button onclick="loadHistory()">Historique</button>
+    <button onclick="location.href='/kitchen'">Kitchen</button>
+    <button onclick="location.href='/logout'">Logout</button>
+  </div>
+</div>
+
+<div class="main" id="app"></div>
+<div id="toast" class="toast"></div>
+
+<script>
+
+const app = document.getElementById("app");
+
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.innerText = msg;
+  t.classList.add("show");
+
+  setTimeout(()=>{
+    t.classList.remove("show");
+  },2000);
+}
+function setActive(el){
+  document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"));
+  el.classList.add("active");
+}
+
+/* ================= PRODUCTS ================= */
+
+function loadProducts(){
+  fetch("/api/products")
+  .then(r=>r.json())
+  .then(data=>{
+
+    let html = `
+<h2>Produits</h2>
+
+<input id="name" placeholder="Nom">
+<input id="price" placeholder="Prix">
+
+<select id="categorySelect"></select>
+
+<textarea id="desc" placeholder="Desc"></textarea>
+<input type="file" id="fileInput">
+
+<button class="btn" onclick="addProduct()">Ajouter</button>
+
+<table>
+<tr>
+  <th>Image</th>
+  <th>Nom</th>
+  <th>Prix</th>
+  <th>Catégorie</th>
+  <th>Action</th>
+</tr>
+`;
+
+    data.forEach(p=>{
+      html += `
+<tr>
+  <td>${p.image ? `<img src="${p.image}" width="45">` : ""}</td>
+  <td>${p.name || ""}</td>
+  <td>${p.price}</td>
+  <td>${p.category}</td>
+  <td><button class="btn" onclick="deleteProduct(${p.id})">Supprimer</button></td>
+</tr>
+`;
+    });
+
+    html += "</table>";
+    app.innerHTML = html;
+    loadCategorySelect();
+  });
+}
+
+function deleteProduct(id){
+  fetch("/api/delete_product/"+id,{method:"DELETE"})
+  .then(()=>loadProducts());
+}
+
+async function addProduct(){
+
+  let file = document.getElementById("fileInput").files[0];
+  let imageUrl = "";
+
+  if(file){
+    let form = new FormData();
+    form.append("file", file);
+
+    let res = await fetch("/api/upload_image",{method:"POST",body:form});
+    let data = await res.json();
+    imageUrl = data.url;
+  }
+
+  fetch("/api/add_product",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      name:document.getElementById("name").value,
+      price:document.getElementById("price").value,
+      category:document.getElementById("categorySelect").value,
+      description:document.getElementById("desc").value,
+      image:imageUrl
+    })
+  }).then(()=>loadProducts());
+}
+
+/* ================= QR ================= */
+
+function loadQR(){
+
+  fetch("/api/generate_qr_tables")
+  .then(r=>r.json())
+  .then(data=>{
+
+    let html = `
+<h2>QR Tables</h2>
+
+<div style="margin-bottom:15px;">
+  <input id="newTables" type="number" placeholder="Ajouter des tables">
+  <button class="btn" onclick="addTables()">Ajouter</button>
+</div>
+
+<div class="qrBox">
+`;
+
+    data.forEach(t=>{
+      html += `
+<div class="qrCard">
+  <h3>Table ${t.table_number}</h3>
+  <canvas id="qr_${t.table_number}"></canvas>
+</div>`;
+    });
+
+    html += "</div>";
+    app.innerHTML = html;
+
+    data.forEach(t=>{
+      let url = window.location.origin+"/menu?rid="+t.restaurant_id+"&table="+t.table_number;
+
+      QRCode.toCanvas(
+        document.getElementById("qr_"+t.table_number),
+        url,
+        {width:140}
+      );
+    });
+
+  });
+}
+
+function addTables(){
+
+  let nb = document.getElementById("newTables").value;
+
+  if(!nb) return;
+
+  fetch("/api/add_tables",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({number:nb})
+  }).then(()=>loadQR());
+}
+
+/* ================= INIT ================= */
+
+loadDashboard();
+
+
+function loadCategorySelect(){
+  fetch("/api/categories")
+  .then(r=>r.json())
+  .then(data=>{
+    let s=document.getElementById("categorySelect");
+    if(!s) return;
+    s.innerHTML="";
+    data.forEach(c=>{
+      let o=document.createElement("option");
+      o.value=c[1];
+      o.textContent=c[1];
+      s.appendChild(o);
+    });
+  });
+}
+/* CATEGORIES */
+function loadCategories(){
+  fetch("/api/categories")
+  .then(r=>r.json())
+  .then(data=>{
+    let html=`<h2>Catégories</h2>
+    <input id="catName" placeholder="Nom">
+    <button class="btn" onclick="addCategory()">Ajouter</button>
+
+    <table><tr><th>Nom</th><th></th></tr>`;
+
+    data.forEach(c=>{
+      html+=`
+        <tr>
+          <td>${c[1]}</td>
+          <td><button class="btn" onclick="deleteCategory(${c[0]})">Supprimer</button></td>
+        </tr>`;
+    });
+
+    html+="</table>";
+    app.innerHTML=html;
+  });
+}
+
+function addCategory(){
+  fetch("/api/add_category",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({name:catName.value})
+  }).then(()=>{toast("OK");loadCategories();});
+}
+
+function deleteCategory(id){
+  fetch("/api/delete_category/"+id,{method:"DELETE"})
+  .then(()=>{toast("Supprimé");loadCategories();});
+}
+
+/* DASHBOARD */
+function loadDashboard(){
+  fetch("/api/dashboard_stats")
+  .then(r=>r.json())
+  .then(d=>{
+
+    app.innerHTML=`
+      <h2>Dashboard Business</h2>
+
+      <div class="cards">
+        <div class="card">Produits <h2>${d.products}</h2></div>
+        <div class="card">Catégories <h2>${d.categories}</h2></div>
+        <div class="card">Commandes <h2>${d.total_orders}</h2></div>
+        <div class="card">Revenue jour <h2>${d.revenue_today} DA</h2></div>
+        <div class="card">Revenue mois <h2>${d.revenue_month} DA</h2></div>
+      </div>
+
+      <div class="card" style="margin-top:20px;">
+        <canvas id="chart"></canvas>
+      </div>
+
+      <div class="card" style="margin-top:20px;">
+        <h3>Top Produits</h3>
+        ${(d.top_products||[]).map(p=>`
+          <div style="display:flex;justify-content:space-between;padding:6px 0;">
+            <span>${p[0]}</span>
+            <b>${p[1]}</b>
+          </div>
+        `).join("")}
+      </div>
+    `;
+  });
+}
+/* HISTORY */
+function loadHistory(){
+  fetch("/api/orders_history")
+  .then(r=>r.json())
+  .then(data=>{
+    let html=`<h2>Historique</h2>`;
+
+    data.forEach(o=>{
+      html+=`
+      <div class="historyCard">
+        <b>Table ${o.table}</b> - ${o.time}
+        <div>Total: ${o.total} DA</div>
+        <div>Status: ${o.status}</div>
+      </div>`;
+    });
+
+    app.innerHTML=html;
+  });
+}
+function loadCategorySelect(){
+  fetch("/api/categories")
+  .then(r=>r.json())
+  .then(data=>{
+    let select = document.getElementById("categorySelect");
+    select.innerHTML = "";
+
+    data.forEach(c=>{
+      let opt = document.createElement("option");
+      opt.value = c[1];
+      opt.textContent = c[1];
+      select.appendChild(opt);
+    });
+  });
+}
+
+
+
+</script>
+
+</body>
+</html>
