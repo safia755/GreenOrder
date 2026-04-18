@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Kitchen - GreenOrder</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+:root{
+  --green:#16c172;
+  --orange:#ff9800;
+  --red:#ff4d4f;
+  --bg:#f6faf7;
+  --card:#ffffff;
+  --text:#0b0f14;
+  --muted:#6b7280;
+  --border:rgba(0,0,0,0.08);
+  --shadow:0 10px 25px rgba(0,0,0,0.06);
+}
+
+*{box-sizing:border-box;}
+
+body{
+  margin:0;
+  font-family:Inter,Segoe UI,Arial;
+  background:var(--bg);
+}
+
+/* HEADER */
+header{
+  background:white;
+  padding:18px;
+  text-align:center;
+  font-weight:700;
+  border-bottom:1px solid var(--border);
+}
+
+/* GRID */
+#ordersContainer{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:15px;
+  padding:15px;
+}
+
+/* ORDER */
+.order{
+  background:white;
+  border-radius:14px;
+  padding:15px;
+  box-shadow:var(--shadow);
+  transition:0.25s;
+  border-left:5px solid var(--green);
+  animation:fadeIn 0.3s ease;
+}
+
+.order:hover{
+  transform:translateY(-3px);
+}
+
+/* URGENCY COLORS */
+.order.new{border-left-color:var(--green);}
+.order.medium{border-left-color:var(--orange);}
+.order.old{border-left-color:var(--red);}
+
+/* HEADER */
+.order-header{
+  display:flex;
+  justify-content:space-between;
+  font-weight:600;
+  margin-bottom:10px;
+}
+
+/* ITEMS */
+.order-items{
+  font-size:14px;
+  color:var(--muted);
+  margin-bottom:10px;
+}
+
+/* BUTTON */
+.btn-ready{
+  width:100%;
+  padding:10px;
+  border:none;
+  border-radius:10px;
+  background:var(--green);
+  color:white;
+  font-weight:600;
+  cursor:pointer;
+  transition:0.2s;
+}
+
+.btn-ready:active{
+  transform:scale(0.95);
+}
+
+/* NOTIF */
+#notif{
+  position:fixed;
+  top:20px;
+  right:20px;
+  background:#111;
+  color:white;
+  padding:12px 16px;
+  border-radius:10px;
+  opacity:0;
+  transform:translateY(-10px);
+  transition:0.3s;
+}
+#notif.show{
+  opacity:1;
+  transform:translateY(0);
+}
+
+/* ANIM */
+@keyframes fadeIn{
+  from{opacity:0; transform:translateY(10px);}
+  to{opacity:1; transform:translateY(0);}
+}
+</style>
+</head>
+
+<body>
+
+<header>Kitchen Dashboard</header>
+
+<div id="ordersContainer"></div>
+<div id="notif"></div>
+
+<!-- SOUND -->
+<audio id="sound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
+
+<script>
+
+let lastIds = [];
+
+/* NOTIF MODERNE */
+function showNotif(msg){
+  const n=document.getElementById("notif");
+  n.innerText=msg;
+  n.classList.add("show");
+
+  setTimeout(()=>n.classList.remove("show"),2000);
+}
+
+/* SON */
+function playSound(){
+  const s=document.getElementById("sound");
+  s.currentTime=0;
+  s.play().catch(()=>{});
+}
+
+/* CALCUL URGENCE */
+function getUrgency(timeStr){
+  if(!timeStr) return "new";
+
+  const now = new Date();
+  const orderTime = new Date("1970-01-01T"+timeStr);
+
+  const diff = (now - orderTime) / 1000;
+
+  if(diff < 60) return "new";
+  if(diff < 300) return "medium";
+  return "old";
+}
+
+/* FETCH ORDERS (OPTIMISÉ) */
+function fetchOrders(){
+  fetch("/api/orders")
+  .then(r=>r.json())
+  .then(data=>{
+
+    const container = document.getElementById("ordersContainer");
+
+    let newIds = data.map(o=>o.id);
+
+    // Détection nouvelles commandes
+    let hasNew = newIds.some(id => !lastIds.includes(id));
+
+    if(hasNew && lastIds.length){
+      showNotif("Nouvelle commande");
+      playSound();
+    }
+
+    // Evite re-render inutile
+    if(JSON.stringify(newIds) === JSON.stringify(lastIds)){
+      return;
+    }
+
+    container.innerHTML = "";
+
+    data.sort((a,b)=>b.id-a.id);
+
+    data.forEach(order=>{
+
+      const div = document.createElement("div");
+      div.className = "order " + getUrgency(order.time);
+
+      let itemsHtml = "";
+
+      (order.items || []).forEach(it=>{
+        let qty = it.qty || 1;
+        let name = it.name || "Produit";
+        let comment = it.comment ? `<br><small style="color:#999">(${it.comment})</small>` : "";
+
+        itemsHtml += `
+          ${qty} x ${name}
+          ${comment}
+          <br>
+        `;
+      });
+
+      div.innerHTML = `
+        <div class="order-header">
+          <span>Table ${order.table || "-"}</span>
+          <span>${order.time || ""}</span>
+          <span>${order.total || 0} DA</span>
+        </div>
+
+        <div class="order-items">${itemsHtml}</div>
+
+        <button class="btn-ready" onclick="markReady(${order.id})">
+          Prêt
+        </button>
+      `;
+
+      container.appendChild(div);
+    });
+
+    lastIds = newIds;
+  });
+}
+
+/* READY */
+function markReady(id){
+  fetch("/api/order_ready/"+id,{method:"POST"})
+  .then(()=>{
+    fetchOrders();
+    showNotif("Commande prête");
+  });
+}
+
+/* AUTO REFRESH (SMOOTH) */
+setInterval(fetchOrders,2000);
+
+/* INIT */
+fetchOrders();
+
+</script>
+
+</body>
+</html>
